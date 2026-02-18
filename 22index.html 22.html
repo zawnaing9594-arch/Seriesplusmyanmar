@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title></title>
+	<meta name="generator" content="LibreOffice 25.8.4.2 (Linux)"/>
+	<meta name="created" content="00:00:00"/>
+	<meta name="changed" content="00:00:00"/>
+	<style type="text/css">
+		@page { size: 8.27in 11.69in; margin: 0.79in }
+		p { margin-bottom: 0.1in; line-height: 115%; background: transparent }
+		pre { font-size: 10pt; font-family: "Liberation Mono", monospace; background: transparent }
+	</style>
+</head>
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><pre>&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;SeriesGenius&lt;/title&gt;
+&lt;!-- Tailwind CSS CDN --&gt;
+&lt;script src=&quot;https://cdn.tailwindcss.com&quot;&gt;&lt;/script&gt;
+&lt;!-- Lucide Icons CDN --&gt;
+&lt;script type=&quot;module&quot;&gt;
+  import * as lucide from &quot;https://cdn.skypack.dev/lucide-react&quot;;
+  window.Lucide = lucide;
+&lt;/script&gt;
+&lt;!-- React + ReactDOM + Babel --&gt;
+&lt;script src=&quot;https://unpkg.com/react@18/umd/react.development.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/react-dom@18/umd/react-dom.development.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@babel/standalone/babel.min.js&quot;&gt;&lt;/script&gt;
+&lt;style&gt;
+  /* Hide default scrollbar for modals */
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class=&quot;bg-[#0f1014] text-white font-sans&quot;&gt;
+
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;script type=&quot;text/babel&quot;&gt;
+
+const { useState, useEffect, useRef, useMemo } = React;
+const { X, Save, Upload, Plus, Trash2, Film, Tv, Settings, Image: ImageIcon, Loader2, Download, UploadCloud, Search } = window.Lucide;
+
+// ===== Mock Data &amp; Types =====
+const MOVIES = [
+  { id: '1', type: 'movie', title: 'Sample Movie', description: 'A sample movie', genre: ['Action'], duration: '2h 10m', rating: 4.5, year: 2023, imageUrl: '', videoUrl: '', cast: ['Actor 1'], director: 'Director 1', episodes: [] }
+];
+
+function App() {
+  const [movies, setMovies] = useState(() =&gt; {
+    const saved = localStorage.getItem('streamgenius_content');
+    return saved ? JSON.parse(saved) : MOVIES;
+  });
+  const [siteConfig, setSiteConfig] = useState(() =&gt; {
+    const saved = localStorage.getItem('streamgenius_config');
+    return saved ? JSON.parse(saved) : { siteName: 'SeriesGenius', siteLogoUrl: '' };
+  });
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState(undefined);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [editingMovie, setEditingMovie] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() =&gt; { localStorage.setItem('streamgenius_content', JSON.stringify(movies)); }, [movies]);
+  useEffect(() =&gt; { localStorage.setItem('streamgenius_config', JSON.stringify(siteConfig)); document.title = siteConfig.siteName; }, [siteConfig]);
+
+  const handleMovieClick = (movie) =&gt; { setSelectedMovie(movie); setSelectedEpisodeId(undefined); };
+  const handleCloseModal = () =&gt; { setSelectedMovie(null); setSelectedEpisodeId(undefined); };
+
+  const handleOpenAdmin = (movieToEdit) =&gt; { setEditingMovie(movieToEdit || null); setIsAdminOpen(true); };
+  const handleSaveMovie = (movie) =&gt; {
+    if (editingMovie) setMovies(prev =&gt; prev.map(m =&gt; m.id === movie.id ? movie : m));
+    else setMovies(prev =&gt; [movie, ...prev]);
+    setIsAdminOpen(false); setEditingMovie(null);
+  };
+  const handleSaveConfig = (config) =&gt; { setSiteConfig(config); setIsAdminOpen(false); };
+  const handleAdminToggle = () =&gt; { setIsAdmin(!isAdmin); };
+
+  const filteredMovies = useMemo(() =&gt; {
+    if (!searchQuery) return movies;
+    const q = searchQuery.toLowerCase();
+    return movies.filter(m =&gt; m.title.toLowerCase().includes(q) || m.genre.some(g =&gt; g.toLowerCase().includes(q)));
+  }, [movies, searchQuery]);
+
+  const contentRows = useMemo(() =&gt; {
+    if (searchQuery) return [{ title: `Search: &quot;${searchQuery}&quot;`, movies: filteredMovies }];
+    if (movies.length === 0) return [];
+    const series = movies.filter(m =&gt; m.type === 'series');
+    const action = movies.filter(m =&gt; m.genre.includes('Action'));
+    const recent = [...movies].reverse().slice(0,5);
+    return [{title:'Trending', movies}, {title:'Series', movies: series}, {title:'Action', movies: action}, {title:'Recently Added', movies: recent}].filter(r=&gt;r.movies.length&gt;0);
+  }, [movies, filteredMovies, searchQuery]);
+
+  const featuredMovie = movies[0] || null;
+
+  return (
+    &lt;div className=&quot;min-h-screen pb-20&quot;&gt;
+      {/* Navbar */}
+      &lt;div className=&quot;flex justify-between p-4 bg-gray-900 sticky top-0 z-20&quot;&gt;
+        &lt;div className=&quot;flex items-center gap-2&quot;&gt;
+          {siteConfig.siteLogoUrl &amp;&amp; &lt;img src={siteConfig.siteLogoUrl} className=&quot;h-8 w-auto&quot; /&gt;}
+          &lt;span className=&quot;font-bold text-xl&quot;&gt;{siteConfig.siteName}&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div className=&quot;flex gap-2&quot;&gt;
+          &lt;input placeholder=&quot;Search...&quot; className=&quot;px-2 rounded bg-gray-800&quot; value={searchQuery} onChange={e=&gt;setSearchQuery(e.target.value)} /&gt;
+          &lt;button onClick={()=&gt;handleAdminToggle()} className=&quot;bg-indigo-600 px-3 py-1 rounded&quot;&gt;Admin&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      {/* Hero */}
+      {!searchQuery &amp;&amp; featuredMovie &amp;&amp; (
+        &lt;div className=&quot;p-4 bg-gray-800 m-4 rounded&quot;&gt;
+          &lt;h2 className=&quot;text-xl font-bold&quot;&gt;{featuredMovie.title}&lt;/h2&gt;
+          &lt;p&gt;{featuredMovie.description}&lt;/p&gt;
+          &lt;button onClick={()=&gt;handleMovieClick(featuredMovie)} className=&quot;mt-2 bg-indigo-600 px-3 py-1 rounded&quot;&gt;Play&lt;/button&gt;
+        &lt;/div&gt;
+      )}
+
+      {/* Rows */}
+      &lt;div className=&quot;space-y-6 mt-4&quot;&gt;
+        {contentRows.map((row, idx)=&gt;(
+          &lt;div key={idx} className=&quot;px-4&quot;&gt;
+            &lt;h3 className=&quot;font-bold mb-2&quot;&gt;{row.title}&lt;/h3&gt;
+            &lt;div className=&quot;flex gap-2 overflow-x-auto&quot;&gt;
+              {row.movies.map(m=&gt;(
+                &lt;div key={m.id} className=&quot;flex-none w-32 bg-gray-700 p-2 rounded cursor-pointer&quot; onClick={()=&gt;handleMovieClick(m)}&gt;
+                  &lt;div className=&quot;h-40 bg-gray-600 mb-2&quot;&gt;{/* Poster placeholder */}&lt;/div&gt;
+                  &lt;span&gt;{m.title}&lt;/span&gt;
+                &lt;/div&gt;
+              ))}
+            &lt;/div&gt;
+          &lt;/div&gt;
+        ))}
+      &lt;/div&gt;
+
+      {/* Footer */}
+      &lt;footer className=&quot;mt-8 text-center text-gray-500 text-sm border-t border-gray-700 py-4&quot;&gt;
+        &amp;copy; {new Date().getFullYear()} {siteConfig.siteName}. All rights reserved.
+      &lt;/footer&gt;
+
+      {/* Modals */}
+      {selectedMovie &amp;&amp; &lt;MovieDetailModal movie={selectedMovie} onClose={handleCloseModal} /&gt;}
+      {isAdminOpen &amp;&amp; &lt;AdminModal movie={editingMovie} allMovies={movies} currentSiteConfig={siteConfig} onSaveContent={handleSaveMovie} onSaveConfig={handleSaveConfig} onClose={()=&gt;setIsAdminOpen(false)} /&gt;}
+    &lt;/div&gt;
+  );
+}
+
+// ===== AdminModal Simplified =====
+function AdminModal({ movie, allMovies=[], currentSiteConfig, onSaveContent, onSaveConfig, onClose }) {
+  const [activeTab, setActiveTab] = useState('content');
+  const [formData, setFormData] = useState({...movie} || { title:'', genre:[], rating:0, episodes:[] });
+  const [contentType, setContentType] = useState(movie?.type || 'movie');
+  const fileInputRef = useRef(null);
+
+  const handleChange = (e) =&gt; { const { name, value } = e.target; setFormData(prev=&gt;({...prev,[name]:value})); };
+  const handleSave = () =&gt; { onSaveContent({...formData,type:contentType,id:movie?.id || Date.now().toString()}); };
+
+  return (
+    &lt;div className=&quot;fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4&quot;&gt;
+      &lt;div className=&quot;bg-gray-900 p-4 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto&quot;&gt;
+        &lt;div className=&quot;flex justify-between mb-4&quot;&gt;
+          &lt;h2 className=&quot;font-bold&quot;&gt;{movie?'Edit':'Add'} Content&lt;/h2&gt;
+          &lt;button onClick={onClose}&gt;&lt;X className=&quot;w-6 h-6&quot; /&gt;&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div className=&quot;flex gap-2 mb-4&quot;&gt;
+          &lt;button onClick={()=&gt;setContentType('movie')} className={`px-2 py-1 rounded ${contentType==='movie'?'bg-indigo-600':'bg-gray-700'}`}&gt;Movie&lt;/button&gt;
+          &lt;button onClick={()=&gt;setContentType('series')} className={`px-2 py-1 rounded ${contentType==='series'?'bg-indigo-600':'bg-gray-700'}`}&gt;Series&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div className=&quot;space-y-2&quot;&gt;
+          &lt;input placeholder=&quot;Title&quot; name=&quot;title&quot; value={formData.title} onChange={handleChange} className=&quot;w-full p-2 rounded bg-gray-800&quot; /&gt;
+          &lt;input placeholder=&quot;Director&quot; name=&quot;director&quot; value={formData.director || ''} onChange={handleChange} className=&quot;w-full p-2 rounded bg-gray-800&quot; /&gt;
+          &lt;textarea placeholder=&quot;Description&quot; name=&quot;description&quot; value={formData.description || ''} onChange={handleChange} className=&quot;w-full p-2 rounded bg-gray-800&quot; rows=&quot;3&quot;&gt;&lt;/textarea&gt;
+          &lt;button onClick={handleSave} className=&quot;bg-green-600 px-3 py-1 rounded mt-2&quot;&gt;Save&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}
+
+// ===== MovieDetailModal Simplified =====
+function MovieDetailModal({ movie, onClose }) {
+  return (
+    &lt;div className=&quot;fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4&quot;&gt;
+      &lt;div className=&quot;bg-gray-800 p-4 rounded w-full max-w-sm&quot;&gt;
+        &lt;div className=&quot;flex justify-between mb-2&quot;&gt;
+          &lt;h2 className=&quot;font-bold&quot;&gt;{movie.title}&lt;/h2&gt;
+          &lt;button onClick={onClose}&gt;&lt;X className=&quot;w-6 h-6&quot; /&gt;&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;p&gt;{movie.description}&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(&lt;App /&gt;);
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>
