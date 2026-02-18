@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeriesGenius</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import * as lucide from "https://cdn.skypack.dev/lucide-react";
+        window.Lucide = lucide;
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#0f1014] text-white font-sans">
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+const { X, Save, Upload, Plus, Trash2, Film, Tv, Settings, Image: ImageIcon, Loader2, Download, UploadCloud, Search } = window.Lucide;
+
+const MOVIES = [
+  { id: '1', type: 'movie', title: 'Sample Movie', description: 'A sample movie content for your site.', genre: ['Action'], duration: '2h 10m', rating: 4.5, year: 2023, imageUrl: '', videoUrl: '', cast: ['Actor 1'], director: 'Director 1', episodes: [] }
+];
+
+function App() {
+  const [movies, setMovies] = useState(() => {
+    const saved = localStorage.getItem('streamgenius_content');
+    return saved ? JSON.parse(saved) : MOVIES;
+  });
+  const [siteConfig, setSiteConfig] = useState(() => {
+    const saved = localStorage.getItem('streamgenius_config');
+    return saved ? JSON.parse(saved) : { siteName: 'SeriesGenius', siteLogoUrl: '' };
+  });
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => { localStorage.setItem('streamgenius_content', JSON.stringify(movies)); }, [movies]);
+  useEffect(() => { localStorage.setItem('streamgenius_config', JSON.stringify(siteConfig)); document.title = siteConfig.siteName; }, [siteConfig]);
+
+  const handleMovieClick = (movie) => { setSelectedMovie(movie); };
+  const handleSaveMovie = (movie) => {
+    setMovies(prev => {
+        const exists = prev.find(m => m.id === movie.id);
+        return exists ? prev.map(m => m.id === movie.id ? movie : m) : [movie, ...prev];
+    });
+    setIsAdminOpen(false);
+  };
+
+  const filteredMovies = useMemo(() => {
+    if (!searchQuery) return movies;
+    const q = searchQuery.toLowerCase();
+    return movies.filter(m => m.title.toLowerCase().includes(q));
+  }, [movies, searchQuery]);
+
+  return (
+    <div className="min-h-screen pb-20">
+      <nav className="flex justify-between items-center p-4 bg-gray-900 sticky top-0 z-20 shadow-lg">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-xl text-indigo-500">{siteConfig.siteName}</span>
+        </div>
+        <div className="flex gap-2">
+          <input 
+            placeholder="Search series..." 
+            className="px-3 py-1 rounded bg-gray-800 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500" 
+            value={searchQuery} 
+            onChange={e=>setSearchQuery(e.target.value)} 
+          />
+          <button onClick={()=>setIsAdminOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-sm transition">Admin</button>
+        </div>
+      </nav>
+
+      <main className="p-6">
+        <h2 className="text-2xl font-bold mb-6">{searchQuery ? `Results for "${searchQuery}"` : "Trending Now"}</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {filteredMovies.map(m=>(
+            <div key={m.id} className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition shadow-md" onClick={()=>handleMovieClick(m)}>
+              <div className="aspect-[2/3] bg-gray-700 flex items-center justify-center">
+                <Film className="w-12 h-12 text-gray-500" />
+              </div>
+              <div className="p-3 text-sm font-medium truncate">{m.title}</div>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      {selectedMovie && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-gray-900 p-6 rounded-xl w-full max-w-lg border border-gray-800">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold text-indigo-400">{selectedMovie.title}</h2>
+              <button onClick={()=>setSelectedMovie(null)} className="p-1 hover:bg-gray-800 rounded-full"><X /></button>
+            </div>
+            <p className="text-gray-400 mb-6 leading-relaxed">{selectedMovie.description}</p>
+            <button className="w-full bg-indigo-600 py-2 rounded-lg font-bold hover:bg-indigo-700 transition">Watch Now</button>
+          </div>
+        </div>
+      )}
+
+      {isAdminOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 p-6 rounded-xl w-full max-w-md border border-gray-700">
+            <div className="flex justify-between mb-6">
+              <h2 className="text-xl font-bold">Add New Content</h2>
+              <button onClick={()=>setIsAdminOpen(false)}><X /></button>
+            </div>
+            <div className="space-y-4">
+              <input id="mTitle" placeholder="Title" className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+              <textarea id="mDesc" placeholder="Description" className="w-full p-2 rounded bg-gray-800 border border-gray-700" rows="3"></textarea>
+              <button 
+                onClick={() => {
+                  const t = document.getElementById('mTitle').value;
+                  const d = document.getElementById('mDesc').value;
+                  if(t) handleSaveMovie({id: Date.now().toString(), title: t, description: d, type: 'movie'});
+                }}
+                className="w-full bg-green-600 py-2 rounded-lg font-bold hover:bg-green-700"
+              >
+                Save Movie
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
